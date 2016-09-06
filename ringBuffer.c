@@ -18,13 +18,13 @@ void putChar(ringBuffer *queue, char data)
 	queue->head++;
 	// signal write process???
 }
-	
+
 int isEmpty(ringBuffer *queue)
 {
 	return queue->head == queue->tail;
 }
 
-int size(ringBuffer *queue)
+unsigned int size(ringBuffer *queue)
 {
 	return queue->head - queue->tail;
 }
@@ -37,5 +37,4 @@ int isFull(ringBuffer *queue)
 int isOverFlow(ringBuffer *queue)
 {
 	return size(queue) > BUFFER_SIZE;
-} 
-
+}

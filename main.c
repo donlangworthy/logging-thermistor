@@ -7,6 +7,9 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/atomic.h>
+#include <util/delay.h>
+#include <avr/sfr_defs.h>
+#include <stdio.h>
 #include "ringBuffer.h"
 
 char output=0;
@@ -14,11 +17,15 @@ volatile char input=0;
 
 volatile ringBuffer incoming;
 volatile ringBuffer outgoing;
+volatile int maxSize=0;
+volatile int overflow=0;
 volatile unsigned long long clock=0;	// time at last tic in seconds since the epoch / 2^32
 volatile unsigned long long secondsPerPulse=(long long int)(1)<<35;
 volatile unsigned long ticks=0; // ticks since last "reset";
 volatile unsigned long long resetTime=0;	// last reset time in seconds since the epoch / 2^32
 //volatile long long int time=0;
+
+
 
 ISR(USART_RX_vect, ISR_BLOCK)
 {
@@ -39,9 +46,15 @@ ISR(TIMER2_OVF_vect)
 
 void transmitChar(char data)
 {
+	int currentSize=size(&outgoing);
+	if (currentSize > maxSize) maxSize=currentSize;
+	if (isOverFlow(&outgoing)) overflow=1;
+	do {} while (isFull(&outgoing)); // block until ready for a byte.
 	putChar(&outgoing, data);
 	UCSR0B |= (1 << UDRIE0);  // set (and trigger) interrupt.
 }
+
+static FILE mystdout = FDEV_SETUP_STREAM(transmitChar, NULL, _FDEV_SETUP_WRITE);
 
 ISR(USART_UDRE_vect)
 {
@@ -143,6 +156,105 @@ void accumulateInt(char currentChar)
 	}
 }
 
+void measureHardware(int numSamples, int msDelay)
+{
+	int min=1024;
+	int max=0;
+	int average=0;
+	char xmitBuffer[32];
+
+	// printBuffer("In measureHardware\n");
+	// printf("measureHardware(%i, %i)\n", numSamples, msDelay);
+	fprintf(& mystdout, "measureHardware(%i, %i)\n", numSamples, msDelay);
+
+	// turn on voltabe to the measument circuit
+	// I'm using PB4 to control the power to the circuit
+	DDRB |= _BV(DDB4);
+	PORTB |= _BV(PORTB4);
+	// set ADC prescalar
+	// use div8 as the prescalar 1mHz / 8 == 125kHz
+	ADCSRA |= _BV(ADPS1) | _BV(ADPS0); // b011;
+	// ADC reference voltage Vcc. I'm using full scale voltage divider
+	ADMUX |= _BV(REFS0); // use AVcc
+	ADMUX |= 5; // ADC5 I'm using PortA pin 5.
+	// Enable the ADC
+	ADCSRA |= _BV(ADEN);
+	for (int i=0; i<numSamples; ++i)
+	{
+		for (int j=0; j<msDelay; ++j) _delay_ms(1);
+		ADCSRA |= _BV(ADSC); // start a measurement
+		loop_until_bit_is_clear(ADCSRA, ADSC);
+		unsigned long reading = (ADCH << 8) | ADCL;
+		fprintf(&mystdout, "reading: %i\n", reading);
+		unsigned long temperature = 713 - (reading*100)/115;
+		fprintf(&mystdout, "Temperature: %i\n", temperature);
+		average += temperature;
+		temperature = temperature*9/5+320;
+		fprintf(&mystdout, "Fahrenheit: %i\n", temperature);
+		if (reading < min) min = reading;
+		if (reading > max) max = reading;
+		fprintf(&mystdout, "reading: %i\n", reading);
+	}
+	average /= numSamples;
+
+	PORTB &= ~_BV(PORTB4); // de-power circuit
+	ADCSRA &= ~_BV(ADEN); // stop ADC
+
+	// Send Results:
+	printBuffer("Average: ");
+	ultoa(average, xmitBuffer, 10);
+	printBuffer(xmitBuffer);
+	printBuffer("\nMax: ");
+	ultoa(max, xmitBuffer, 10);
+	printBuffer(xmitBuffer);
+	printBuffer("\nMin: ");
+	ultoa(min, xmitBuffer, 10);
+	printBuffer(xmitBuffer);
+	printBuffer("\n");
+}
+
+void measure(const char incoming)
+{
+	static int numSamples=0;
+	static int msDelay=0;
+	static char state='S';
+
+	// printBuffer("in measure()\n");
+	//fprintf(&mystdout, "measure(%c)\nnumSamples: %i, msDelay %i\n", incoming, numSamples, msDelay);
+	// parse 2 ints, start measurements on \n
+	if ('\n' == incoming)
+	{
+		//Take measurements here
+		if (0 == numSamples) numSamples=1;
+		measureHardware(numSamples, msDelay);
+		numSamples=0;
+		msDelay=0;
+		state='S';
+	} else
+	{
+		switch (state) {
+			case 'S':
+			  accumulateInt(incoming);
+			  if (' '==incoming)
+				{
+					numSamples=receivedLong;
+					state = 'D';
+					receivedLong=0;
+				}
+				break;
+			case 'D':
+				accumulateInt(incoming);
+				if (' '==incoming)
+				{
+					msDelay=receivedLong;
+					receivedLong=0;
+					state='M';
+				}
+				break;
+		}
+	}
+}
+
 int main(void) {
 	char currentCommand=0;
 	char currentInput=0;
@@ -212,6 +324,16 @@ int main(void) {
 					}
 					else accumulateInt(currentChar);
 					break;
+				case 'M':
+					// Measure Temperature: expect Number of measurements, Delay betwee measurements
+					// return Mean, Max, Min
+					measure(currentChar);
+					break;
+					case 'B': // print and clear outgoing buffer stats
+					fprintf(&mystdout, "Head: %i, tail: %i, maxSize: %i, overflow: %i\n",
+						outgoing.head, outgoing.tail, maxSize, overflow);
+					maxSize=0;
+					overflow=0;
 				case 0 :
 					currentCommand=currentChar;
 					receivedLong=0;
