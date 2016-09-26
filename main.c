@@ -146,6 +146,7 @@ void printBuffer(char * buffer)
 }
 
 unsigned long receivedLong=0;
+char receivedSign=0;
 
 void accumulateInt(char currentChar)
 {
@@ -153,6 +154,9 @@ void accumulateInt(char currentChar)
 	{
 		receivedLong*=10;
 		receivedLong+=currentChar-'0';
+	}
+	else if ('-' == currentChar) {
+		receivedSign=1;
 	}
 }
 
@@ -175,8 +179,9 @@ void measureHardware(int numSamples, int msDelay)
 	// use div8 as the prescalar 1mHz / 8 == 125kHz
 	ADCSRA |= _BV(ADPS1) | _BV(ADPS0); // b011;
 	// ADC reference voltage Vcc. I'm using full scale voltage divider
-	ADMUX |= _BV(REFS0); // use AVcc
-	ADMUX |= 5; // ADC5 I'm using PortA pin 5.
+	// ADMUX |= _BV(REFS0); // use AVcc
+	// ADMUX |= 5; // ADC5 I'm using PortA pin 5. //Check for actually setting to 5.
+	ADMUX = _BV(REFS0) | 0x05; // Use AVcc for reference and pin 5.
 	// Enable the ADC
 	ADCSRA |= _BV(ADEN);
 	for (int i=0; i<numSamples; ++i)
@@ -184,7 +189,9 @@ void measureHardware(int numSamples, int msDelay)
 		for (int j=0; j<msDelay; ++j) _delay_ms(1);
 		ADCSRA |= _BV(ADSC); // start a measurement
 		loop_until_bit_is_clear(ADCSRA, ADSC);
-		unsigned long reading = (ADCH << 8) | ADCL;
+		// unsigned long reading = (ADCH << 8) | ADCL;
+		unsigned long reading = ADCL;
+		reading += ADCH << 8;
 		fprintf(&mystdout, "reading: %i\n", reading);
 		unsigned long temperature = 713 - (reading*100)/115;
 		fprintf(&mystdout, "Temperature: %i\n", temperature);
@@ -319,7 +326,12 @@ int main(void) {
 					// Set Calibratin Frequency
 					if ('\n' == currentChar)
 					{
-						long long int freq = (receivedLong+(1ULL<<32))<<3;
+						long long int freq = receivedLong;
+						if (receivedSign)
+						{
+							freq*=-1;
+						}
+						freq = (freq+(1ULL<<32))<<3;
 						secondsPerPulse = freq;
 					}
 					else accumulateInt(currentChar);

@@ -1,0 +1,4 @@
+echo -n "S $(( $(date +%s) + 1 )) " > $serialPort
+sleep $(dc -e "6k1 $(date +%N) 1000000000/-p")
+echo '*' > $serialPort
+
