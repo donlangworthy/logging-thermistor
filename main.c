@@ -11,6 +11,7 @@
 #include <avr/sfr_defs.h>
 #include <stdio.h>
 #include "ringBuffer.h"
+#include "echo.h"
 
 char output=0;
 volatile char input=0;
@@ -192,15 +193,15 @@ void measureHardware(int numSamples, int msDelay)
 		// unsigned long reading = (ADCH << 8) | ADCL;
 		unsigned long reading = ADCL;
 		reading += ADCH << 8;
-		fprintf(&mystdout, "reading: %i\n", reading);
-		unsigned long temperature = 713 - (reading*100)/115;
-		fprintf(&mystdout, "Temperature: %i\n", temperature);
+		fprintf(&mystdout, "reading: %li\n", reading);
+			unsigned long temperature = 713 - (reading*100)/115;
+		fprintf(&mystdout, "Temperature: %li\n", temperature);
 		average += temperature;
 		temperature = temperature*9/5+320;
-		fprintf(&mystdout, "Fahrenheit: %i\n", temperature);
+		fprintf(&mystdout, "Fahrenheit: %li\n", temperature);
 		if (reading < min) min = reading;
 		if (reading > max) max = reading;
-		fprintf(&mystdout, "reading: %i\n", reading);
+		fprintf(&mystdout, "reading: %li\n", reading);
 	}
 	average /= numSamples;
 
@@ -264,7 +265,6 @@ void measure(const char incoming)
 
 int main(void) {
 	char currentCommand=0;
-	char currentInput=0;
 	incoming.head=incoming.tail=0;
 	outgoing.head=outgoing.tail=0;
 
@@ -287,17 +287,15 @@ int main(void) {
 			switch (currentCommand)
 			{
 				case 'E' :
-					transmitChar(currentChar);
+					echo(currentChar);
 					//transmitChar(currentChar);
 					break;
 				case 'U' :
-					if ('a' <= currentChar && 'z' >= currentChar) currentChar+='A' - 'a';
-					transmitChar(currentChar);
+					uppercase(currentChar);
 					break;
 				case 'L' :
-					if ('A' <= currentChar && 'Z' >= currentChar) currentChar+='a' - 'A';
-					transmitChar(currentChar);
-					break;
+					lowercase(currentChar);
+ 					break;
 				case 'S' : // Set Clock command
 					if ('*' == currentChar)
 					{

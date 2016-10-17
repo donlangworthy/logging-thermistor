@@ -4,4 +4,5 @@ echo "E$(date +%s)" > $serialPort
 echo C > $serialPort
 echo F > $serialPort
 echo "M5 100 " > $serialPort
+echo "B" > $serialPort
 
