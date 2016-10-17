@@ -341,11 +341,12 @@ int main(void) {
 					// return Mean, Max, Min
 					measure(currentChar);
 					break;
-					case 'B': // print and clear outgoing buffer stats
+				case 'B': // print and clear outgoing buffer stats
 					fprintf(&mystdout, "Head: %i, tail: %i, maxSize: %i, overflow: %i\n",
 						outgoing.head, outgoing.tail, maxSize, overflow);
 					maxSize=0;
 					overflow=0;
+					break;
 				case 0 :
 					currentCommand=currentChar;
 					receivedLong=0;
