@@ -141,8 +141,13 @@ int main(void) {
 	{
 		// processing here
 		//PINB |= _BV(PINB5);
+		if (!isEmpty(&outgoing))
+		{
+			setEarliestSleepTime(getTime()+2);
+		}
 		if (!isEmpty(&incoming))
 		{
+			setEarliestSleepTime(getTime()+60);
 			char currentChar=getChar(&incoming);
 			if (0 == currentCommand)
 			{
@@ -166,5 +171,6 @@ int main(void) {
 				receivedSign=0;
 			}
 		}
+		gotoSleep();
 	}
 }

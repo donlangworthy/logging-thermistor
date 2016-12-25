@@ -4,10 +4,6 @@
 #include "clock.h"
 #include "util.h"
 
-unsigned long long getPreciseTime();
-void setTime(unsigned long time);
-unsigned long getTickCount();
-
 volatile unsigned long long clock=0;	// time at last tic in seconds since the epoch / 2^32
 volatile unsigned long long secondsPerPulse=(long long int)(1)<<35;
 volatile unsigned long ticks=0; // ticks since last "reset";
@@ -18,7 +14,7 @@ ISR(TIMER2_OVF_vect)
 {
 	clock += secondsPerPulse;
 	ticks++;
-	PINB |= _BV(PINB5);
+	// PINB |= _BV(PINB5);
 }
 
 unsigned long long getPreciseTime()
