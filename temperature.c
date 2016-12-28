@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <avr/io.h>
+#include <stdio.h>
 #include <avr/interrupt.h>
 #include <util/atomic.h>
 #include <util/delay.h>
@@ -10,11 +11,13 @@
 #include "temperature.h"
 #include "util.h"
 
+int numSamples=0;
+int msDelay=0;
+int offset=0;
+char state='S';
+
 void measure(const char incoming)
 {
-	static int numSamples=0;
-	static int msDelay=0;
-	static char state='S';
 
 	// printBuffer("in measure()\n");
 	//fprintf(&mystdout, "measure(%c)\nnumSamples: %i, msDelay %i\n", incoming, numSamples, msDelay);
@@ -50,6 +53,73 @@ void measure(const char incoming)
 				break;
 		}
 	}
+}
+
+void measureAndLog(const char incoming)
+{
+	switch (state)
+	{
+		case 'S' :
+			accumulateInt(incoming);
+			if (' ' == incoming)
+			{
+				msDelay=receivedLong;
+				receivedLong=0;
+				state = 'O';
+			}
+			break;
+		case 'O' :
+			accumulateInt(incoming);
+			if (' '==incoming)
+			{
+				offset=receivedLong;
+				receivedLong=0;
+				state = 'N';
+			}
+			break;
+		case 'N':
+			accumulateInt(incoming);
+			if (' '==incoming)
+			{
+				numSamples=receivedLong;
+				receivedLong=0;
+				state='X';
+			}
+			break;
+	}
+	if ('\n' == incoming)
+	{
+		// set up logging here....
+		state='S';
+		fprintf(&mystdout, "measureAndLog(%i, %i, %i, f() )\n", msDelay, offset, numSamples);
+		repeatCommand(msDelay, offset, numSamples, getOneMeasurement);
+	}
+}
+
+void getOneMeasurement(unsigned int index)
+{
+	// turn on voltabe to the measument circuit
+	// I'm using PB4 to control the power to the circuit
+	DDRB |= _BV(DDB4);
+	PORTB |= _BV(PORTB4);
+	// set ADC prescalar
+	// use div8 as the prescalar 1mHz / 8 == 125kHz
+	ADCSRA |= _BV(ADPS1) | _BV(ADPS0); // b011;
+	// ADC reference voltage Vcc. I'm using full scale voltage divider
+	// ADMUX |= _BV(REFS0); // use AVcc
+	// ADMUX |= 5; // ADC5 I'm using PortA pin 5. //Check for actually setting to 5.
+	ADMUX = _BV(REFS0) | 0x05; // Use AVcc for reference and pin 5.
+	// Enable the ADC
+	ADCSRA |= _BV(ADEN);
+	ADCSRA |= _BV(ADSC); // start a measurement
+	loop_until_bit_is_clear(ADCSRA, ADSC);
+	// unsigned long reading = (ADCH << 8) | ADCL;
+	unsigned long reading = ADCL;
+	reading += ADCH << 8;
+	unsigned long temperature = 713 - (reading*100)/115;
+	PORTB &= ~_BV(PORTB4); // de-power circuit
+	ADCSRA &= ~_BV(ADEN); // stop ADC
+	fprintf(&mystdout, "Index: %3i, Temperature: %li\n", index, temperature);
 }
 
 void measureHardware(int numSamples, int msDelay)

@@ -9,3 +9,4 @@ unsigned long long getPreciseTime();
 void setTime(unsigned long time);
 unsigned long getTime();
 unsigned long getTickCount();
+void repeatCommand(unsigned int period, unsigned int offset, unsigned int numberOfSamples, void(*command)(unsigned int index));

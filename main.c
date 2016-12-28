@@ -120,6 +120,7 @@ CommandTarget commandTargets[]=
 	{ .commandLetter='Q', .commandPointer=setFrequency},
 	{ .commandLetter='M', .commandPointer=measure},
 	{ .commandLetter='B', .commandPointer=bufferStatus},
+	{ .commandLetter='Z', .commandPointer=measureAndLog},
 	{ .commandLetter=0, .commandPointer=doNothing}
 };
 
@@ -171,6 +172,7 @@ int main(void) {
 				receivedSign=0;
 			}
 		}
+		runCommand();
 		gotoSleep();
 	}
 }

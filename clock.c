@@ -103,3 +103,40 @@ void setTime(unsigned long time)
 		}
 	}
 }
+
+unsigned int _period;
+unsigned long int _timeToFire;
+unsigned int _numberOfSamples;
+unsigned int _numberOfLastSample;
+void (*_callback)(unsigned int index)=NULL;
+
+void repeatCommand(unsigned int period, unsigned int offset, unsigned int numberOfSamples, void(*command)(unsigned int index))
+{
+	_numberOfLastSample=0;
+	_numberOfSamples=numberOfSamples;
+	_period=period;
+	_timeToFire=(getTime()/period*period+offset);
+	while (getTime() > _timeToFire)
+	{
+		_timeToFire+=_period;
+	}
+	_callback=command;
+	fprintf(&mystdout, "repeatCommand: currentTime:%li, _timeToFire: %li\n", getTime(), _timeToFire);
+}
+
+void runCommand()
+{
+	if (NULL != _callback)
+	{
+		if (getTime() > _timeToFire)
+		{
+			_callback(_numberOfLastSample);
+			++_numberOfLastSample;
+			_timeToFire+=_period;
+			if (_numberOfLastSample>=_numberOfSamples)
+			{
+				_callback=NULL;
+			}
+		}
+	}
+}
