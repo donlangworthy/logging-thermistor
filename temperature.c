@@ -7,9 +7,9 @@
 #include <util/atomic.h>
 #include <util/delay.h>
 #include <avr/sfr_defs.h>
-#include <stdio.h>
 #include "temperature.h"
 #include "util.h"
+#include "clock.h"
 
 int numSamples=0;
 int msDelay=0;
@@ -119,7 +119,8 @@ void getOneMeasurement(unsigned int index)
 	unsigned long temperature = 713 - (reading*100)/115;
 	PORTB &= ~_BV(PORTB4); // de-power circuit
 	ADCSRA &= ~_BV(ADEN); // stop ADC
-	fprintf(&mystdout, "Index: %3i, Temperature: %li\n", index, temperature);
+	unsigned long myTime=getTime();
+	fprintf(&mystdout, "Time: %li, Index: %3i, Temperature: %li\n", myTime, index, temperature);
 }
 
 void measureHardware(int numSamples, int msDelay)
@@ -127,7 +128,6 @@ void measureHardware(int numSamples, int msDelay)
 	int min=1024;
 	int max=0;
 	int average=0;
-	char xmitBuffer[32];
 
 	// printBuffer("In measureHardware\n");
 	// printf("measureHardware(%i, %i)\n", numSamples, msDelay);
@@ -170,14 +170,6 @@ void measureHardware(int numSamples, int msDelay)
 	ADCSRA &= ~_BV(ADEN); // stop ADC
 
 	// Send Results:
-	printBuffer("Average: ");
-	ultoa(average, xmitBuffer, 10);
-	printBuffer(xmitBuffer);
-	printBuffer("\nMax: ");
-	ultoa(max, xmitBuffer, 10);
-	printBuffer(xmitBuffer);
-	printBuffer("\nMin: ");
-	ultoa(min, xmitBuffer, 10);
-	printBuffer(xmitBuffer);
-	printBuffer("\n");
+ fprintf(&mystdout, "Average: %i\nMax: %i\nMin: %i\n",
+		average, max, min);
 }

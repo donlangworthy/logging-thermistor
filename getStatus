@@ -1,5 +1,6 @@
 echo E > $serialPort
 echo T > $serialPort
+#sleep 0.10;
 echo "E$(date +%s)" > $serialPort
 echo C > $serialPort
 echo F > $serialPort

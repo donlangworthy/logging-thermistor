@@ -3,12 +3,13 @@
 #include <avr/interrupt.h>
 #include "clock.h"
 #include "util.h"
+#include "sleep.h"
 
 volatile unsigned long long clock=0;	// time at last tic in seconds since the epoch / 2^32
 volatile unsigned long long secondsPerPulse=(long long int)(1)<<35;
 volatile unsigned long ticks=0; // ticks since last "reset";
 volatile unsigned long long resetTime=0;	// last reset time in seconds since the epoch / 2^32
-char timeBuffer[10];
+char timeBuffer[20];
 
 ISR(TIMER2_OVF_vect)
 {
@@ -17,7 +18,7 @@ ISR(TIMER2_OVF_vect)
 	// PINB |= _BV(PINB5);
 }
 
-unsigned long long getPreciseTime()
+unsigned long long getPreciseTime(void)
 {
 	unsigned long long result=0;
 	// Atomic
@@ -28,9 +29,12 @@ unsigned long long getPreciseTime()
 	return result;
 }
 
-unsigned long getTime()
+unsigned long getTime(void)
 {
-	return getPreciseTime() >> 32;
+	//return getPreciseTime() >> 32;
+	unsigned long result=clock >> 32;
+	result += TCNT2 >> 5;
+	return result;
 }
 
 void setClock(char input)
@@ -38,6 +42,7 @@ void setClock(char input)
   if ('*' == input)
   {
     setTime(receivedLong);
+		setEarliestSleepTime(getTime()+60);
   }
   else accumulateInt(input);
 }
@@ -79,7 +84,7 @@ void setFrequency(char input)
   }
   else accumulateInt(input);
 }
-unsigned long getTickCount()
+unsigned long getTickCount(void)
 {
 	return ticks;
 }
@@ -124,7 +129,7 @@ void repeatCommand(unsigned int period, unsigned int offset, unsigned int number
 	fprintf(&mystdout, "repeatCommand: currentTime:%li, _timeToFire: %li\n", getTime(), _timeToFire);
 }
 
-void runCommand()
+void runCommand(void)
 {
 	if (NULL != _callback)
 	{

@@ -19,7 +19,7 @@ void stayAwakeCycles(unsigned int requestedCycles)
   if (cycles < requestedCycles) cycles=requestedCycles;
 }
 
-char isEligibleToSleep()
+char isEligibleToSleep(void)
 {
   char result=getTime() > sleepTime && 0 == cycles;
   if (0 != cycles)
@@ -29,7 +29,7 @@ char isEligibleToSleep()
   return result;
 }
 
-void gotoSleep()
+void gotoSleep(void)
 {
   if (isEligibleToSleep())
   {
@@ -43,3 +43,4 @@ void gotoSleep()
     cycles=100;
   }
 }
+ 

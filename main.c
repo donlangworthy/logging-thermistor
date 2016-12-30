@@ -15,6 +15,7 @@
 #include "clock.h"
 #include "util.h"
 #include "temperature.h"
+#include "sleep.h"
 
 char output=0;
 volatile char input=0;
@@ -134,6 +135,9 @@ int main(void) {
 	clock_init();
 
 	DDRB=_BV(DDB5);
+	PORTB |= _BV(PINB5);
+
+	setEarliestSleepTime(getTime()+60);
 
 	UCSR0B |= _BV(RXCIE0);
 	sei();
