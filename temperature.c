@@ -15,6 +15,11 @@ int numSamples=0;
 int msDelay=0;
 int offset=0;
 char state='S';
+char *readings=NULL;
+unsigned long int firstReadingTime;
+unsigned int numberOfReadings;
+unsigned long int interval;
+const int storageBias=15;
 
 void measure(const char incoming)
 {
@@ -55,6 +60,19 @@ void measure(const char incoming)
 	}
 }
 
+void retrieveLog(const char incoming)
+{
+	if ('\n'== incoming)
+	{
+		fprintf(&mystdout, "firstReadingTime: %li, interval: %li, numberOfReadings: %i, ", firstReadingTime, interval, numberOfReadings);
+		for (int i=0; i<numberOfReadings; ++i)
+		{
+			fprintf(&mystdout, "[%i]:%i ", i, readings[i]+storageBias);
+		}
+		fprintf(&mystdout, "\n");
+	}
+}
+
 void measureAndLog(const char incoming)
 {
 	switch (state)
@@ -92,7 +110,17 @@ void measureAndLog(const char incoming)
 		// set up logging here....
 		state='S';
 		fprintf(&mystdout, "measureAndLog(%i, %i, %i, f() )\n", msDelay, offset, numSamples);
-		repeatCommand(msDelay, offset, numSamples, getOneMeasurement);
+		if (NULL != readings)
+		{
+			free(readings);
+		}
+		readings=malloc(sizeof(char)*numSamples);
+		if (NULL != readings)
+		{
+			numberOfReadings=0;
+			interval=msDelay;
+			firstReadingTime=repeatCommand(msDelay, offset, numSamples, getOneMeasurement);
+		}
 	}
 }
 
@@ -119,6 +147,14 @@ void getOneMeasurement(unsigned int index)
 	unsigned long temperature = 713 - (reading*100)/115;
 	PORTB &= ~_BV(PORTB4); // de-power circuit
 	ADCSRA &= ~_BV(ADEN); // stop ADC
+	if (NULL != readings)
+	{
+		int storageValue=temperature-storageBias;
+		if (0>storageValue) storageValue=0;
+		if (255<storageValue) storageValue=255;
+		readings[index]=storageValue;
+		numberOfReadings=index+1;
+	}
 	unsigned long myTime=getTime();
 	fprintf(&mystdout, "Time: %li, Index: %3i, Temperature: %li\n", myTime, index, temperature);
 }

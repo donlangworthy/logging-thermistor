@@ -115,7 +115,7 @@ unsigned int _numberOfSamples;
 unsigned int _numberOfLastSample;
 void (*_callback)(unsigned int index)=NULL;
 
-void repeatCommand(unsigned int period, unsigned int offset, unsigned int numberOfSamples, void(*command)(unsigned int index))
+unsigned long int repeatCommand(unsigned int period, unsigned int offset, unsigned int numberOfSamples, void(*command)(unsigned int index))
 {
 	_numberOfLastSample=0;
 	_numberOfSamples=numberOfSamples;
@@ -127,6 +127,7 @@ void repeatCommand(unsigned int period, unsigned int offset, unsigned int number
 	}
 	_callback=command;
 	fprintf(&mystdout, "repeatCommand: currentTime:%li, _timeToFire: %li\n", getTime(), _timeToFire);
+	return _timeToFire;
 }
 
 void runCommand(void)

@@ -122,6 +122,7 @@ CommandTarget commandTargets[]=
 	{ .commandLetter='M', .commandPointer=measure},
 	{ .commandLetter='B', .commandPointer=bufferStatus},
 	{ .commandLetter='Z', .commandPointer=measureAndLog},
+	{ .commandLetter='R', .commandPointer=retrieveLog},
 	{ .commandLetter=0, .commandPointer=doNothing}
 };
 

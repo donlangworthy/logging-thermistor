@@ -9,5 +9,5 @@ unsigned long long getPreciseTime(void);
 void setTime(unsigned long time);
 unsigned long getTime(void);
 unsigned long getTickCount(void);
-void repeatCommand(unsigned int period, unsigned int offset, unsigned int numberOfSamples, void(*command)(unsigned int index));
+unsigned long int repeatCommand(unsigned int period, unsigned int offset, unsigned int numberOfSamples, void(*command)(unsigned int index));
 void runCommand(void);
