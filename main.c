@@ -65,6 +65,17 @@ ISR(USART_UDRE_vect)
 	if (isEmpty(&outgoing)) UCSR0B &= ~(1 << UDRIE0); // have to check isEmpty() again as I may have emptied the buffer.
 }
 
+void checkSerialConnected(void);
+
+void checkSerialConnected()
+{
+	if (PIND & _BV(PIND0))
+	{
+		setEarliestSleepTime(getTime()+1);
+	}
+}
+
+
 void clock_init(void)
 {
 	ASSR |= _BV(AS2);
@@ -138,7 +149,7 @@ int main(void) {
 	DDRB=_BV(DDB5);
 	PORTB |= _BV(PINB5);
 
-	setEarliestSleepTime(getTime()+60);
+	setEarliestSleepTime(getTime()+2);
 
 	UCSR0B |= _BV(RXCIE0);
 	sei();
@@ -153,7 +164,7 @@ int main(void) {
 		}
 		if (!isEmpty(&incoming))
 		{
-			setEarliestSleepTime(getTime()+60);
+			setEarliestSleepTime(getTime()+2);
 			char currentChar=getChar(&incoming);
 			if (0 == currentCommand)
 			{
@@ -177,6 +188,7 @@ int main(void) {
 				receivedSign=0;
 			}
 		}
+		checkSerialConnected();
 		runCommand();
 		gotoSleep();
 	}

@@ -39,8 +39,7 @@ void gotoSleep(void)
     sleep_mode();  // this really does it....
     PORTB |= _BV(PINB5);
     sleep_disable();
-    setEarliestSleepTime(getTime());
+    //setEarliestSleepTime(getTime());
     cycles=100;
   }
 }
- 
